@@ -33,5 +33,6 @@ class Vector:
 
         vector_line = pg.draw.line(display,self.color,self.start,self.end,self.line_width)
         vector_arrow = pg.draw.polygon(display,self.color,((arrow_point_1),(arrow_point_2),(arrow_point_3)))
-
+def complex_vec_multiply(a,b,start: tuple):
+    return Vector((start[0],start[1]),(a.end[0]*b.end[0] - a.end[1]*b.end[1],a.end[0]*b.end[1]+b.end[0]*a.end[1]),(0,255,0),10,12,14)
 

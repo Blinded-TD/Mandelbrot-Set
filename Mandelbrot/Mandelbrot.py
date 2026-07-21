@@ -1,80 +1,72 @@
 import numpy as np
 import pygame as pg
-from Vector_Class import Vector,complex_vec_multiply
-import random 
+from Vector_Class import Vector,real_to_pg,pg_to_real, Complex_number, complex_multiplication, complex_addition, complex_absolute_value,normalizing_func
 #initalizing scene
-rng = np.random.default_rng()
 pg.init()
-screen = pg.display.set_mode((640,360))
+screen = pg.display.set_mode((640,640))
 clock = pg.time.Clock()
 running = True
-dt,tt = 0,0
-center = pg.Vector2(screen.get_width()/2,screen.get_height()/2)
-#vector init
-vec1_start = pg.Vector2(center.x,center.y)
-vec1_end = pg.Vector2(center.x,center.y+50)
-vec1 = Vector((center.x,center.y),(vec1_end.x,vec1_end.y),(200,0,100),10,10,20)
-#Text setup
-font = pg.font.Font(None,30)
-clicked_vectors = []
+
+#Creating alternitive cordinate system
+origin = pg.Vector2(screen.get_width()/2,screen.get_height()/2)
+
+#image setup
+Mandelbrot_Equation_Image = pg.image.load("Mandelbrot Horseshoe Eq.png").convert_alpha()
+
+#numbers of steps
+iterations = 20
+
+#initalizing stored vectors
+stored_vectors = []
+
+#creating color matrix
+color_matrix = np.zeros((screen.get_height()+1,screen.get_width()+1))
+for i in range(screen.get_height()+1):
+    for j in range(screen.get_width()+1):
+        y,x = (i/(screen.get_height())*4 - 2,j/(screen.get_width())*4 - 2) #converting to real cords
+        C = Complex_number(x,y)
+        Z = Complex_number(0,0)
+        for r in range(iterations): #calculating value of sequence 
+            Z = complex_addition(complex_multiplication(Z,Z),C)
+        color_value = normalizing_func(complex_absolute_value(Z))
+        color_matrix[i][j] = color_value
 
 # session
 while running:
     for event in pg.event.get():
         if event.type == pg.QUIT:
             running = False
-    screen.fill(color = "#00000000")
+    screen.fill(color = "#F3F3F3FF")
     
-    #vector graphic
-    vec1.start =pg.Vector2(center.x,center.y)
-    vec1.end = pg.Vector2(vec1_end.x,vec1_end.y)
-    vec1_angle = vec1.angle()
-    #display stuff here
-    floor = pg.draw.line(screen,"red",(0,center.y),(screen.get_width(),center.y) )
-    vec1.draw(screen)
-    #controls
+    #creating Mandelbrot image
+    for i in range(screen.get_height() + 1):
+        for j in range(screen.get_width() + 1):
+            screen.set_at((j,i),(0,0,color_matrix[i][j]))
+ 
+    #Rendering Equation Image 
+    screen.blit(Mandelbrot_Equation_Image,(origin.x - 50, origin.y -200))
+
+    #detecting click
     if event.type == pg.MOUSEBUTTONDOWN:
         if event.button == 1:
-            clicked_pos = pg.Vector2(event.pos)
-            clicked_vec = Vector((clicked_pos.x,clicked_pos.y),
-                                 (30*np.cos(np.pi/4) + clicked_pos.x, 30*np.sin(np.pi/4) + clicked_pos.y),
-                                 (255,0,0),5,7,8)
-            clicked_vectors.append(clicked_vec)            
-            init_start = pg.Vector2(clicked_vec.arrow_tip().x,clicked_vec.arrow_tip().y)
-            for i in range(15):                
-                vec_extesion = Vector((init_start.x,init_start.y),(30*np.cos(np.pi*i/10) + init_start.x, 30*np.sin(i*np.pi/10) + init_start.y),(255,0,0),5,7,8)
-                init_start = pg.Vector2(vec_extesion.arrow_tip().x,vec_extesion.arrow_tip().y)
-                clicked_vectors.append(vec_extesion)
-    for vec in clicked_vectors:
+            stored_vectors = []
+            clicked_vec_Pg = Vector((origin.x,origin.y),(event.pos[0],event.pos[1]),(0,0,0),2,2,3)
+            clicked_vec_R = pg_to_real(clicked_vec_Pg,screen) #turning clicked cords into Real cords
+            stored_vectors.append(real_to_pg(clicked_vec_R,screen))
+            next_vec_R = clicked_vec_R
+            Z = Complex_number(0,0)
+            C = Complex_number(event.pos[0]/(screen.get_width())*4 - 2,event.pos[1]/(screen.get_width())*4 - 2)
+            Mandelbrot_Results = []
+            for i in range(iterations):
+                Z = complex_addition(complex_multiplication(Z,Z), C)
+                Mandelbrot_Results.append(Z)
+            init_vector_R = pg.Vector2(0,0)
+            for i in range(iterations): #creating visual vectors  
+                next_vec_R = Vector((init_vector_R.x,init_vector_R.y),(Mandelbrot_Results[i].real,Mandelbrot_Results[i].img),(round(255-i*(255/iterations - 1)),0,0),2,2,3)
+                init_vector_R = pg.Vector2(next_vec_R.end)
+                stored_vectors.append(real_to_pg((next_vec_R),screen))
+    #drawing stored vectors 
+    for vec in stored_vectors:
         vec.draw(screen)
-    ## RANDOM SHIT
-    scaler = 10
-    a = Vector((0*scaler,0*scaler),(0*scaler,1*scaler),(0,255,0),10,12,14)
-    b = Vector((0*scaler,0*scaler),(2*scaler,-2*scaler),(0,0,255),10,12,14)
-    c = complex_vec_multiply(a,b,(0,0))
-    print(c.end[0],c.end[1])               
-    clicked_vectors.append(c)
-    
-    keys = pg.key.get_pressed()
-    if keys[pg.K_a]:
-        vec1_end.x -= 50 * dt
-    if keys[pg.K_d]:
-        vec1_end.x += 50 * dt
-    if keys[pg.K_w]:
-        vec1_end.y -= 50 * dt
-    if keys[pg.K_s]:
-        vec1_end.y += 50 * dt
-    
-    
-    #Rendering Timer
-    text_surface = font.render(f"{tt:.02f}s" + f" {vec1_angle:.02f} deg" ,True,"blue")
-    text_rect = text_surface.get_rect()
-    text_rect.center = (screen.get_width()/2,screen.get_height()/4)
-    screen.blit(text_surface,text_rect)
-
-    #Time stuff
-    dt = clock.tick(60)/1000
-    tt += dt
-
     pg.display.flip()
 pg.quit()
